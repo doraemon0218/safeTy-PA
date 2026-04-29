@@ -7,7 +7,7 @@ import { StepNav } from "@/components/StepNav";
 import { calcDose, getSummary } from "@/lib/tpa";
 import {
   CheckCircle2, XCircle, AlertTriangle, Syringe,
-  Timer, RefreshCw, ChevronDown, ChevronUp
+  Timer, RefreshCw, ChevronDown, ChevronUp, FlaskConical, Pill
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -151,11 +151,104 @@ export default function DosingPage() {
           </div>
         </section>
 
+        {/* 薬剤規格 */}
+        <section className="bg-white rounded-xl border border-border p-4 space-y-3">
+          <h2 className="font-semibold flex items-center gap-2">
+            <Pill className="w-4 h-4 text-primary" />
+            薬剤規格
+          </h2>
+          <div className="rounded-lg bg-slate-50 border border-slate-200 p-3 space-y-2 text-sm">
+            <div className="flex items-start justify-between gap-2 pb-2 border-b border-slate-200">
+              <span className="font-bold text-slate-800">アクチバシン注（アルテプラーゼ）</span>
+              <span className="text-xs text-slate-500 whitespace-nowrap">rt-PA</span>
+            </div>
+            <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-xs">
+              <div>
+                <p className="text-muted-foreground">規格</p>
+                <p className="font-semibold">6,000,000 IU / バイアル</p>
+                <p className="text-muted-foreground">= <span className="font-bold text-foreground">60 mg</span> / バイアル（粉末）</p>
+              </div>
+              <div>
+                <p className="text-muted-foreground">付属溶解液</p>
+                <p className="font-semibold">注射用水 60 mL</p>
+                <p className="text-muted-foreground">溶解後 → 1 mg/mL</p>
+              </div>
+              <div>
+                <p className="text-muted-foreground">外観（溶解後）</p>
+                <p className="font-semibold">無色〜淡黄色・透明</p>
+              </div>
+              <div>
+                <p className="text-muted-foreground">安定性（調製後）</p>
+                <p className="font-semibold">室温8時間以内に使用</p>
+              </div>
+            </div>
+            <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-1.5">
+              ⚠️ 他剤との混注不可。ガラス製またはPVC製容器を使用。希釈する場合は 0.1 mg/mL 以上を維持。
+            </p>
+          </div>
+        </section>
+
+        {/* 溶解手順 */}
+        <section className="bg-white rounded-xl border border-border p-4 space-y-3">
+          <h2 className="font-semibold flex items-center gap-2">
+            <FlaskConical className="w-4 h-4 text-primary" />
+            溶解手順
+          </h2>
+          {plan && weight ? (
+            <div className="space-y-2">
+              {[
+                {
+                  step: "①",
+                  label: `アクチバシン ${protocol === "japan" ? 1 : plan.totalDose > 60 ? 2 : 1} バイアルを準備`,
+                  sub: `必要量 ${plan.totalDose} mg（バイアル1本 = 60 mg）`,
+                },
+                {
+                  step: "②",
+                  label: "付属の注射用水 60 mL をバイアルに加える",
+                  sub: "針を粉末に直接当てず、瓶壁に沿って注入する",
+                },
+                {
+                  step: "③",
+                  label: "穏やかに転倒混和（泡立てない）",
+                  sub: "激しく振らない。泡が生じた場合は消えるまで静置",
+                },
+                {
+                  step: "④",
+                  label: "溶解確認：無色〜淡黄色・透明であること",
+                  sub: "混濁・沈殿がある場合は使用しない",
+                },
+                {
+                  step: "⑤",
+                  label: `ボーラス用シリンジに ${plan.bolusVolume} mL を吸う`,
+                  sub: `${plan.bolusDose} mg 相当（総量の10%）`,
+                },
+                {
+                  step: "⑥",
+                  label: `残り ${plan.infusionVolume} mL を点滴バッグ or シリンジポンプへ移す`,
+                  sub: `${plan.infusionDose} mg 相当（総量の90%）。使用しない残液は廃棄`,
+                },
+              ].map(({ step, label, sub }) => (
+                <div key={step} className="flex gap-3 items-start">
+                  <span className="w-7 h-7 rounded-full bg-primary/10 text-primary text-xs font-bold flex items-center justify-center shrink-0 mt-0.5">
+                    {step}
+                  </span>
+                  <div>
+                    <p className="text-sm font-medium">{label}</p>
+                    <p className="text-xs text-muted-foreground">{sub}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground">体重を入力すると溶解手順が表示されます</p>
+          )}
+        </section>
+
         {/* 投与量計算結果 */}
         {plan && weight && (
           <section className="bg-white rounded-xl border border-border p-4 space-y-4">
             <div className="flex items-center justify-between">
-              <h2 className="font-semibold">投与量計算結果</h2>
+              <h2 className="font-semibold">投与量・速度</h2>
               <span className="text-xs text-muted-foreground">体重 {weight} kg</span>
             </div>
 
@@ -169,45 +262,87 @@ export default function DosingPage() {
                 {protocol === "japan" ? "0.6" : "0.9"} mg/kg × {weight} kg
                 {weight * (protocol === "japan" ? 0.6 : 0.9) >
                   (protocol === "japan" ? 60 : 90) && "（上限適用）"}
+                　→　{plan.totalDose} mL（1 mg/mL溶液）
               </p>
             </div>
 
-            {/* ボーラス・維持 */}
+            {/* ボーラス・維持 並べて */}
             <div className="grid grid-cols-2 gap-3">
-              <div className="rounded-lg border border-border p-3 space-y-1">
-                <p className="text-xs font-semibold text-muted-foreground uppercase">① ボーラス（10%）</p>
-                <p className="text-xl font-bold tabular-nums">{plan.bolusDose} mg</p>
-                <p className="text-sm text-primary font-medium">{plan.bolusVolume} mL</p>
-                <p className="text-xs text-muted-foreground">1分間で静注</p>
+              {/* ボーラス */}
+              <div className="rounded-lg border-2 border-primary/30 bg-primary/5 p-3 space-y-2">
+                <p className="text-xs font-bold text-primary uppercase tracking-wide">① ボーラス（10%）</p>
+                <div>
+                  <p className="text-2xl font-bold tabular-nums">{plan.bolusDose} mg</p>
+                  <p className="text-sm font-semibold text-primary">{plan.bolusVolume} mL</p>
+                </div>
+                <div className="rounded bg-white/70 px-2 py-1.5 space-y-0.5">
+                  <p className="text-xs font-semibold">投与法</p>
+                  <p className="text-xs text-muted-foreground">シリンジで<span className="font-bold text-foreground">1分間</span>かけて静注</p>
+                  <p className="text-xs text-muted-foreground">速度：{plan.bolusVolume} mL/min</p>
+                </div>
               </div>
-              <div className="rounded-lg border border-border p-3 space-y-1">
-                <p className="text-xs font-semibold text-muted-foreground uppercase">② 維持（90%）</p>
-                <p className="text-xl font-bold tabular-nums">{plan.infusionDose} mg</p>
-                <p className="text-sm text-primary font-medium">{plan.infusionVolume} mL</p>
-                <p className="text-xs text-muted-foreground">60分で点滴</p>
+
+              {/* 維持 */}
+              <div className="rounded-lg border-2 border-blue-300 bg-blue-50 p-3 space-y-2">
+                <p className="text-xs font-bold text-blue-700 uppercase tracking-wide">② 維持投与（90%）</p>
+                <div>
+                  <p className="text-2xl font-bold tabular-nums">{plan.infusionDose} mg</p>
+                  <p className="text-sm font-semibold text-blue-700">{plan.infusionVolume} mL</p>
+                </div>
+                <div className="rounded bg-white/70 px-2 py-1.5 space-y-0.5">
+                  <p className="text-xs font-semibold">投与法</p>
+                  <p className="text-xs text-muted-foreground">輸液ポンプで<span className="font-bold text-foreground">60分間</span>で点滴</p>
+                  <p className="text-xs text-muted-foreground">ボーラス終了後すぐに開始</p>
+                </div>
               </div>
             </div>
 
-            {/* 注入速度 */}
-            <div className="rounded-lg bg-blue-50 border border-blue-200 p-3 space-y-2">
-              <p className="text-sm font-semibold text-blue-900">点滴ポンプ設定値</p>
+            {/* ポンプ設定 強調 */}
+            <div className="rounded-xl bg-blue-600 p-4 space-y-2 text-white">
+              <p className="text-xs font-semibold opacity-80 uppercase tracking-wide">輸液ポンプ設定値</p>
               <div className="flex items-center justify-between">
-                <span className="text-sm text-blue-800">投与速度</span>
-                <span className="text-xl font-bold text-blue-900 tabular-nums">
-                  {plan.infusionRate} mL/h
-                </span>
+                <div>
+                  <p className="text-sm opacity-80">投与速度</p>
+                  <p className="text-4xl font-bold tabular-nums leading-none">{plan.infusionRate}
+                    <span className="text-xl font-semibold ml-1">mL/h</span>
+                  </p>
+                </div>
+                <div className="text-right space-y-0.5">
+                  <p className="text-xs opacity-70">投与量</p>
+                  <p className="text-lg font-bold">{plan.infusionVolume} mL</p>
+                  <p className="text-xs opacity-70">投与時間：60分</p>
+                </div>
               </div>
-              <p className="text-xs text-blue-700">
-                ※ rt-PA 1バイアル（20 mg/20 mL）を生食で{plan.infusionVolume} mL に調製（1 mg/mL）
-              </p>
+              <div className="border-t border-white/30 pt-2 text-xs opacity-80 space-y-0.5">
+                <p>• 濃度：1 mg/mL（アクチバシン60 mg ＋ 注射用水60 mL）</p>
+                <p>• ライン：専用ルートを使用、他剤と混注しない</p>
+                <p>• 設定確認：ボーラス終了直後に速度をセット</p>
+              </div>
             </div>
 
-            <div className="text-xs text-muted-foreground space-y-0.5 p-3 bg-muted rounded-lg">
-              <p className="font-medium">調製方法</p>
-              <p>• rt-PA {Math.ceil(plan.totalDose / 20)} バイアル使用</p>
-              <p>• 生理食塩液で溶解し、最終濃度 1 mg/mL に調製</p>
-              <p>• ボーラス用シリンジ：{plan.bolusVolume} mL</p>
-              <p>• 点滴バッグ（または持続シリンジ）：{plan.infusionVolume} mL</p>
+            {/* 投与フロー図 */}
+            <div className="rounded-lg bg-muted p-3 space-y-2">
+              <p className="text-xs font-semibold">投与シーケンス</p>
+              <div className="flex items-center gap-0 text-xs">
+                {[
+                  { label: "溶解", sub: "準備完了", color: "bg-slate-400" },
+                  { label: `ボーラス\n${plan.bolusVolume} mL`, sub: "1分間", color: "bg-primary" },
+                  { label: `維持投与\n${plan.infusionRate} mL/h`, sub: "60分間", color: "bg-blue-500" },
+                  { label: "終了", sub: "61分後", color: "bg-emerald-500" },
+                ].map((item, i, arr) => (
+                  <div key={i} className="flex items-center flex-1">
+                    <div className="flex-1 flex flex-col items-center gap-0.5">
+                      <div className={cn("w-full rounded text-white text-center py-1.5 px-1 text-[10px] font-medium leading-tight whitespace-pre-line", item.color)}>
+                        {item.label}
+                      </div>
+                      <p className="text-[10px] text-muted-foreground">{item.sub}</p>
+                    </div>
+                    {i < arr.length - 1 && (
+                      <div className="w-3 h-0.5 bg-border shrink-0" />
+                    )}
+                  </div>
+                ))}
+              </div>
             </div>
           </section>
         )}
